@@ -21,13 +21,11 @@ import Jimp from "jimp";
 import * as vscode from "vscode";
 
 export const routersGenerate = async (uri: Uri) => {
-  console.log(uri);
 
   let targetDirectory = uri.fsPath;
-  console.log(targetDirectory);
 
   try {
-    routeNamesGenerate(targetDirectory);
+    routeNamesGenerate(targetDirectory, uri);
 
     window.showInformationMessage(
       `Successfully Generated Getx Routers Text File`
@@ -39,6 +37,7 @@ export const routersGenerate = async (uri: Uri) => {
     );
   }
 };
+
 
 function getRootPath(resource: Uri | undefined): string | undefined {
   let path: string | undefined;
@@ -60,79 +59,84 @@ function getRootPath(resource: Uri | undefined): string | undefined {
 }
 
 // 生成 route names
-function routeNamesGenerate(targetDirectory: string) {
+function routeNamesGenerate(targetDirectory: string, uri: Uri) {
   let isFirst = true;
   walkSync(targetDirectory, async (filePath: string, stat: object) => {
-    // 根目录
-    let rootPath = getRootPath(undefined);
+    try {
+      // 根目录
+      let rootPath = getRootPath(uri);
 
-    // 相对路径
-    let relativePath = vscode.workspace.asRelativePath(filePath);
+      // 相对路径
+      let relativePath = vscode.workspace.asRelativePath(filePath, false);
 
-    // 检查 lib/pages
-    if (relativePath.indexOf("lib/pages/") === -1) {
-      return;
-    }
-
-    // 检查 index.dart
-    if (relativePath.indexOf("/index.dart") === -1) {
-      return;
-    }
-
-    // 排除 lib/pages/index.dart
-    if (relativePath.indexOf("lib/pages/index.dart") !== -1) {
-      return;
-    }
-
-    // 名称
-    let arrFilePath = relativePath
-      .replace("lib/pages/", "")
-      .replace("/index.dart", "")
-      .split("/");
-    const modalFileName = arrFilePath.join("_");
-    const filePathName = arrFilePath.join("/");
-    // const pascalCaseName = changeCase.pascalCase(modalFileName);
-    const snakeCaseName = changeCase.snakeCase(modalFileName);
-    const camelCaseName = changeCase.camelCase(modalFileName);
-
-    // 文件名
-    const pascalCaseName = changeCase.pascalCase(
-      arrFilePath[arrFilePath.length - 1]
-    );
-
-    // 删除文件
-    if (isFirst === true) {
-      isFirst = false;
-      if (existsSync(`${rootPath}/lib/common/routers/names.txt`)) {
-        rmSync(`${rootPath}/lib/common/routers/names.txt`);
+      // 检查 lib/pages
+      if (relativePath.indexOf("lib/pages/") === -1) {
+        return;
       }
-      if (existsSync(`${rootPath}/lib/common/routers/pages.txt`)) {
-        rmSync(`${rootPath}/lib/common/routers/pages.txt`);
+
+      // 检查 index.dart
+      if (relativePath.indexOf("/index.dart") === -1) {
+        return;
       }
-      if (existsSync(`${rootPath}/lib/pages/index.txt`)) {
-        rmSync(`${rootPath}/lib/pages/index.txt`);
+
+      // 排除 lib/pages/index.dart
+      if (relativePath.indexOf("lib/pages/index.dart") !== -1) {
+        return;
       }
-    }
-    // 写入列表
-    appendFileSync(
-      `${rootPath}/lib/common/routers/names.txt`,
-      `static const ${camelCaseName} = '/${snakeCaseName}';\r\n`,
-      "utf8"
-    );
-    appendFileSync(
-      `${rootPath}/lib/common/routers/pages.txt`,
-      `
+
+      // 名称
+      let arrFilePath = relativePath
+        .replace("lib/pages/", "")
+        .replace("/index.dart", "")
+        .split("/");
+      const modalFileName = arrFilePath.join("_");
+      const filePathName = arrFilePath.join("/");
+      // const pascalCaseName = changeCase.pascalCase(modalFileName);
+      const snakeCaseName = changeCase.snakeCase(modalFileName);
+      const camelCaseName = changeCase.camelCase(modalFileName);
+
+      // 文件名
+      const pascalCaseName = changeCase.pascalCase(
+        arrFilePath[arrFilePath.length - 1]
+      );
+
+      // 删除文件
+      if (isFirst === true) {
+        isFirst = false;
+        if (existsSync(`${rootPath}/lib/common/routers/names.txt`)) {
+          rmSync(`${rootPath}/lib/common/routers/names.txt`);
+        }
+        if (existsSync(`${rootPath}/lib/common/routers/pages.txt`)) {
+          rmSync(`${rootPath}/lib/common/routers/pages.txt`);
+        }
+        if (existsSync(`${rootPath}/lib/pages/index.txt`)) {
+          rmSync(`${rootPath}/lib/pages/index.txt`);
+        }
+      }
+
+      // 写入列表
+      appendFileSync(
+        `${rootPath}/lib/common/routers/names.txt`,
+        `static const ${camelCaseName} = '/${snakeCaseName}';\r\n`,
+        "utf8"
+      );
+      appendFileSync(
+        `${rootPath}/lib/common/routers/pages.txt`,
+        `
       GetPage(
         name: RouteNames.${camelCaseName},
         page: () => const ${pascalCaseName}Page(),
       ),`,
-      "utf8"
-    );
-    appendFileSync(
-      `${rootPath}/lib/pages/index.txt`,
-      `export '${filePathName}/index.dart';\r\n`,
-      "utf8"
-    );
+        "utf8"
+      );
+      appendFileSync(
+        `${rootPath}/lib/pages/index.txt`,
+        `export '${filePathName}/index.dart';\r\n`,
+        "utf8"
+      );
+    } catch (error) {
+      console.error(error);
+    }
   });
 }
 
